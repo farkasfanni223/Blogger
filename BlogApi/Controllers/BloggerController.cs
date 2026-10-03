@@ -154,9 +154,68 @@ namespace BlogApi.Controllers
         }
 
         [HttpPut("update/{id}")]
-        public object UpdateBlogger([FromRoute]int id)
-        { 
-        
+        public object UpdateBlogger([FromRoute]int id, [FromBody]UpdateBloggerDto updateBloggerDto)
+        {
+            var connector = new MySqlConnection(ConnectionString);
+
+            connector.Open();
+
+            string sql = @"UPDATE `blogger` SET `name`= @name,
+            `email`=@email,`age`=@age,`password`=@password WHERE `id` =@id;";
+
+            var cmd = new MySqlCommand(sql, connector);
+            object result= null;
+
+            cmd.Parameters.AddWithValue(@"name", updateBloggerDto.Name);
+            cmd.Parameters.AddWithValue(@"email", updateBloggerDto.Email);
+            cmd.Parameters.AddWithValue(@"age", updateBloggerDto.Age);
+            cmd.Parameters.AddWithValue(@"password", updateBloggerDto.Password);
+            cmd.Parameters.AddWithValue(@"id", id);
+
+            if (cmd.ExecuteNonQuery() > 0)
+            {
+                result = StatusCode(200, new { message = "Sikeres frissítés", result = updateBloggerDto });
+            }
+            else
+            {
+                result = NotFound(new { message = "Nincs ilyen tag", result = updateBloggerDto });
+            }
+
+            connector.Close();
+            return result;
+            
+        }
+
+        [HttpDelete("delete")]
+
+        public object DeleteBlogger([FromQuery] int id)
+        {
+            var connector = new MySqlConnection(ConnectionString);
+
+            connector.Open();
+
+            string sql = @"DELETE FROM blogger WHERE id = @id";
+
+            var cmd = new MySqlCommand(sql, connector);
+
+            cmd.Parameters.AddWithValue("@id", id);
+
+
+            object result = null;
+
+            if (cmd.ExecuteNonQuery() > 0)
+            {
+                result = StatusCode(200, new { message = "Sikeres törlés", result = id });
+            }
+            else
+            {
+                result = NotFound(new { message = "Nincs ilyen tag", result = "" });
+            }
+
+            connector.Close();
+
+            return result;
+
         }
     }
 
