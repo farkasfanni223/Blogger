@@ -1,5 +1,6 @@
 ﻿using BlogApi.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using System.Reflection.Metadata.Ecma335;
@@ -8,7 +9,6 @@ namespace BlogApi.Controllers
 {
     [Route("blogger")]
     [ApiController]
-
     public class BloggerController : ControllerBase
     {
         public readonly string ConnectionString = "server=localhost;database=blog;user=root;password=";
@@ -30,7 +30,6 @@ namespace BlogApi.Controllers
 
             while (datareader.Read())
             {
-
                 var blogger = new Blogger
                 {
                     Id = datareader.GetInt32(0),
@@ -40,23 +39,31 @@ namespace BlogApi.Controllers
                     Password = datareader.GetString(4),
                     RegistrationTime = datareader.GetDateTime(5)
                 };
+
                 lista.Add(blogger);
             }
 
             connector.Close();
+
             return new { message = "Sikeres lekérdezés.", result = lista };
         }
 
-           [HttpGet("byId")]
-            
-         public object GetBloggerById([FromRoute] int id)
+        [HttpGet("byId/{id}")]
+        public object GetBloggerById([FromRoute] int id)
         {
             var connector = new MySqlConnection(ConnectionString);
+
             connector.Open();
-            string sql = "@ SELECT * FROM blogger WHERE id = @id";
+
+            string sql = @"SELECT * FROM blogger WHERE  id = @id";
+
             var cmd = new MySqlCommand(sql, connector);
-            cmd.Parameters.AddWithValue("id", id);
+
+            cmd.Parameters.AddWithValue("@id", id);
+
             var datareader = cmd.ExecuteReader();
+            object result = null;
+
             if (datareader.Read())
             {
                 var blogger = new Blogger
@@ -68,18 +75,24 @@ namespace BlogApi.Controllers
                     Password = datareader.GetString(4),
                     RegistrationTime = datareader.GetDateTime(5)
                 };
-                return new { message = "Sikeres lekérdezés.", result = blogger };
+
+                result = new { message = "Sikeres lekérdezés.", result = blogger };
             }
             else
-            { 
-                result = new { message = "Sikertelen lekérdezés.", result = ""};
+            {
+                result = new { message = "Sikertelen lekérdezés.", result = "" };
             }
-            connector.Clone();
+
+            connector.Close();
+
+            return result;
         }
-        
-        
-        
 
+        [HttpPost("login")]
 
+        public object PostBloggerLogin([FromBody]Blogger blogger)
+        {
+            return new { Email = blogger.Email, Password = blogger.Password};
+        }
     }
 }
