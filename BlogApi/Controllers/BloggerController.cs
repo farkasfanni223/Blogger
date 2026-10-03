@@ -1,4 +1,5 @@
 ﻿using BlogApi.Models;
+using BlogApi.Models.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -80,7 +81,7 @@ namespace BlogApi.Controllers
             }
             else
             {
-                result = new { message = "Sikertelen lekérdezés.", result = "" };
+                result = new { message = "Sikertlen lekérdezés.", result = "" };
             }
 
             connector.Close();
@@ -89,10 +90,75 @@ namespace BlogApi.Controllers
         }
 
         [HttpPost("login")]
-
-        public object PostBloggerLogin([FromBody]Blogger blogger)
+        public object PostBloggerLogin([FromBody] LoginBloggerDto loginBloggerDto)
         {
-            return new { Email = blogger.Email, Password = blogger.Password};
+            var connector = new MySqlConnection(ConnectionString);
+
+            connector.Open();
+
+            string sql = @"SELECT * FROM blogger WHERE  email = @email AND password = @password";
+
+            var cmd = new MySqlCommand(sql, connector);
+
+            cmd.Parameters.AddWithValue("@email", loginBloggerDto.Email);
+            cmd.Parameters.AddWithValue("@password", loginBloggerDto.Password);
+
+            var datareader = cmd.ExecuteReader();
+            object result = null;
+
+            if (datareader.Read())
+            {
+                var blogger = new Blogger
+                {
+                    Id = datareader.GetInt32(0),
+                    Name = datareader.GetString(1),
+                    Email = datareader.GetString(2),
+                    Age = datareader.GetInt32(3),
+                    Password = datareader.GetString(4),
+                    RegistrationTime = datareader.GetDateTime(5)
+                };
+
+                result = new { message = "Regisztrált tag.", result = blogger };
+            }
+            else
+            {
+                result = new { message = "Nem rgisztrált tag.", result = "" };
+            }
+
+            connector.Close();
+
+            return result;
+        }
+
+        [HttpPost("register")]
+        public object AddNewBlogger([FromBody] RegisterBloggerDto registerBloggerDto)
+        {
+            var connector = new MySqlConnection(ConnectionString);
+            connector.Open();
+
+            string sql = @"INSERT INTO `blogger`(`name`, `email`, `age`, `password`, `RegistrationTime`) VALUES (@name,@email,@age,@password,@registrationTime)";
+
+            var cmd = new MySqlCommand(@sql, connector);
+
+            cmd.Parameters.AddWithValue("@name", registerBloggerDto.Name);
+            cmd.Parameters.AddWithValue("@email", registerBloggerDto.Email);
+            cmd.Parameters.AddWithValue("@age", registerBloggerDto.Age);
+            cmd.Parameters.AddWithValue("@password", registerBloggerDto.Password);
+            cmd.Parameters.AddWithValue("@registrationTime", DateTime.Now);
+
+            cmd.ExecuteNonQuery();
+
+            connector.Close();
+
+            return new { message = "Sikeres hozzáadás", result = registerBloggerDto };
+        }
+
+        [HttpPut("update/{id}")]
+        public object UpdateBlogger([FromRoute]int id)
+        { 
+        
         }
     }
+
+
 }
